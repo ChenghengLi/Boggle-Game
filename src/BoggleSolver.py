@@ -114,7 +114,20 @@ class BoggleSolver:
         return self._valid
 
     def scoreOf(self, s: str):
-        pass
+        if not self._isWord(s):
+            return 0
+
+        if len(s) < 2:
+            return 0
+        if len(s) < 5:
+            return 1
+        if len(s) < 6:
+            return 2
+        if len(s) < 7:
+            return 3
+        if len(s) < 8:
+            return 4
+        return 5
 
     def highestScore(self):
         score = 0

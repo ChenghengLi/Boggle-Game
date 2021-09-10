@@ -11,8 +11,11 @@ letters = "ABCDEFGHIJKLMNOPKRSTUVWXZ"
 
 '''
 import random
-letters = "ABCDEFGHIJKLMNOPKRSTUVWXZ"
-def randomBoard(x: int, y : int) -> list[list[chr]]:
+
+letters = "AAAAABCDEEEEEEFGHIIIIJKLMNOOOOPKRSTUUUUVWXZ"
+
+
+def randomBoard(x: int, y: int) -> list[list[chr]]:
     board = [[None] * y for _ in range(x)]
 
     for i in range(x):
@@ -21,9 +24,11 @@ def randomBoard(x: int, y : int) -> list[list[chr]]:
 
     return board
 
+
 def printBoard(board):
     for i in board:
         print(i)
+
 
 # CREATE BOGGLE TABLE
 '''
@@ -34,41 +39,43 @@ table = [['X', 'E', 'H', 'E'],
 '''
 
 
-'''
-# READ DICTIONARY WORD
-f = open("dict.txt")
-list = list()
-for line in f:
-    if line is None or line == "":
-        continue
-    list.append(line.strip())
 
-# CREATE BOGGLE SOLVER
-a = BoggleSolver(list)
 
-# PRINT ALL POSSIBLE WORDS
-print(sorted(a.getAllWords(board)))
-'''
+
 
 from BoggleBoard import BoggleBoard
+from BoggleSolver import BoggleSolver
 import pygame
 from pygame.locals import *
 import os
 import sys
 
-
-table = randomBoard(4,4)
+table = randomBoard(4, 4)
 board = BoggleBoard(table)
-
 
 # -----------
 # Constantes
 # -----------
+from functools import lru_cache
+# READ DICTIONARY WORD
+@lru_cache
+def read():
+    f = open("..\dict.txt")
+    LIST = list()
+    for line in f:
+        if line is None or line == "":
+            continue
+        LIST.append(line.strip())
+    return LIST
 
+LIST = read()
+BS = BoggleSolver(LIST)
 SCREEN_WIDTH = 640
 SCREEN_HEIGHT = 480
 DIR = "..\sprites"
 IMAGE_DIM = 60
+LINE_COLOR = Color(12,233,249)
+BLACK = Color(0,0,0)
 
 
 # ------------------------------
@@ -96,17 +103,37 @@ def load_image(nombre, dir_imagen, alpha=False):
 # Creamos los sprites (clases) de los objetos del juego:
 
 class Letter(pygame.sprite.Sprite):
-    _letter = None
+    letter = None
+    _skins = None
+    selected = False
 
     def __init__(self, letter: chr):
-        self._letter = letter.upper()
-        image = "letter_" + self._letter + ".png"
-        self.image = load_image(image, DIR + "\Box", alpha=True)
-        self.scale(IMAGE_DIM, IMAGE_DIM)
+        self.letter = letter.upper()
+        image = "letter_" + self.letter + ".png"
+        self._skins = list()
+        self._skins.append(load_image(image, DIR + "\Box", alpha=True))
+        self._skins.append(load_image(image, DIR + "\Metal", alpha=True))
+        self._skins.append(load_image(image, DIR + "\Marble", alpha=True))
+        self.selected = False
+        self.skinUpdate()
         self.rect = self.image.get_rect()
 
     def scale(self, w: int, h: int):
         self.image = pygame.transform.scale(self.image, (w, h))
+
+    def skinUpdate(self, skin: int = -1):
+        if skin == 0:
+            self.image = self._skins[0]
+        elif skin == 1:
+            self.image = self._skins[1]
+        elif skin == 2:
+            self.image = self._skins[2]
+        else:
+            if self.selected == False:
+                self.image = self._skins[0]
+            else:
+                self.image = self._skins[1]
+        self.scale(IMAGE_DIM, IMAGE_DIM)
 
     def position(self, x: int, y: int):
         self.rect.x = x
@@ -115,7 +142,23 @@ class Letter(pygame.sprite.Sprite):
 
 class Board:
 
+    centery = SCREEN_HEIGHT/2
+    centerx = SCREEN_WIDTH/2
+    last = None
+    word = ""
+
+    @classmethod
+    def setY(cls, y: int):
+        cls.centery = y
+
+    @classmethod
+    def setX(cls, x: int):
+        cls.centerx = x
+
     def __init__(self, board: BoggleBoard):
+
+        print(BS.getAllWords(board))
+
         self.rows = board.rows()
         self.cols = board.cols()
         self.board = [[None] * self.cols for _ in range(self.rows)]
@@ -125,11 +168,9 @@ class Board:
                 self.board[i][j] = Letter(board.getLetter(i, j))
 
     def calcPos(self):
-        centery = SCREEN_HEIGHT / 2
-        centerx = SCREEN_WIDTH / 2
 
-        y = centery - (self.cols/2)*IMAGE_DIM
-        x = centerx - (self.rows/2)*IMAGE_DIM
+        y = self.centery - (self.cols / 2) * IMAGE_DIM
+        x = self.centerx - (self.rows / 2) * IMAGE_DIM
 
         b = y
         for i in range(self.rows):
@@ -145,6 +186,85 @@ class Board:
                 win.blit(self.board[i][j].image, self.board[i][j].rect)
 
 
+    def _check(self, x: int, y: int):
+        def neighbour(x: int, y: int):
+            for i, j in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1), (x + 1, y + 1), (x - 1, y + 1), (x - 1, y - 1),
+                         (x + 1, y - 1)):
+                if i < 0 or j < 0 or i >= self.rows or j >= self.cols:
+                    continue
+                yield i, j
+
+        for i, j in neighbour(x, y):
+
+            if i == self.last[0] and j == self.last[1]:
+                return True
+
+        return False
+
+    def _drawLine(self):
+        pass
+
+    def update(self, event, win,showWord, showPoints ):
+        if event.button == 1:
+            for i in range(self.rows):
+                for j in range(self.cols):
+                    if self.board[i][j].rect.collidepoint(event.pos):
+                        if self.last is None:
+                            self.word += self.board[i][j].letter
+                            self.board[i][j].selected = True
+                            self.board[i][j].skinUpdate(2)
+                            self.last = [i, j]
+                        elif self._check(i, j):
+                            self.word += self.board[i][j].letter
+                            self.board[i][j].selected = True
+                            self.board[self.last[0]][self.last[1]].skinUpdate()
+                            self.board[i][j].skinUpdate(2)
+                            self.last[0], self.last[1] = i, j
+
+        elif event.button == 3:
+            print(self.word)
+            print(BS.scoreOf(self.word))
+            showPoints.sumPoints(BS.scoreOf(self.word))
+            self.word = ""
+            self.last = None
+            for row in self.board:
+                for item in row:
+                    item.selected = False
+                    item.skinUpdate()
+
+        showWord.setWord(self.word)
+
+
+
+class ShowWord:
+    def __init__(self):
+        self.font = pygame.font.Font("o.ttf",32)
+        self.score = self.font.render("Word : ", 10, LINE_COLOR)
+
+    def display(self, win):
+        win.blit(self.score, (0,0))
+
+    def setWord(self, s: str):
+        self.score = self.font.render("Word : " + s, 10, LINE_COLOR)
+
+
+class ShowPoints:
+
+    def __init__(self):
+        self.points = 0
+        self.font = pygame.font.Font("o.ttf", 32)
+        self.score = self.font.render("Points: " + str(self.points), 10, LINE_COLOR)
+
+    def display(self, win):
+        win.blit(self.score, (0, 100))
+
+    def sumPoints(self, s: int):
+        self.points += s
+        self.score = self.font.render("Points: " + str(self.points), 10, LINE_COLOR)
+
+class SubMenu:
+    def __init__(self):
+        pass
 
 # ------------------------------
 # Funcion principal del juego
@@ -155,22 +275,28 @@ def main():
     pygame.init()
     # creamos la ventana y le indicamos un titulo:
     screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-    pygame.display.set_caption("Ejemplo de un Pong Simple")
+    pygame.display.set_caption("Boggle Game")
 
     # cargamos los objetos
-    letter = Letter('A')
     b = Board(board)
     b.calcPos()
+    a = ShowWord()
+    c= ShowPoints()
 
     # el bucle principal del juego
     while True:
-        b.display(screen)
-        pygame.display.flip()
-
         # Actualizamos los obejos en pantalla
-
+        screen.fill(BLACK)
+        b.display(screen)
+        a.display(screen)
+        c.display(screen)
+        pygame.display.flip()
         # Posibles entradas del teclado y mouse
         for event in pygame.event.get():
+
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                b.update(event, screen, a, c)
+
             if event.type == pygame.QUIT:
                 sys.exit(0)
 
