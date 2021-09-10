@@ -1,5 +1,5 @@
 from BoggleBoard import BoggleBoard
-
+from functools import lru_cache
 
 class Node:
     def __init__(self, r: int):
