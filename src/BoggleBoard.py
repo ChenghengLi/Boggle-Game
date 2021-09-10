@@ -6,8 +6,8 @@ class BoggleBoard:
 
     def __init__(self, board : list[list[chr]]):
         self._board = board
-        self._rows = len(board[0])
-        self._cols = len(board)
+        self._rows = len(board)
+        self._cols = len(board[0])
 
     def getLetter(self, x : int, y : int):
         return self._board[x][y]
