@@ -58,7 +58,7 @@ board = BoggleBoard(table)
 # -----------
 from functools import lru_cache
 # READ DICTIONARY WORD
-@lru_cache
+
 def read():
     f = open("..\dict.txt")
     LIST = list()
@@ -115,6 +115,7 @@ def load_sound(nombre, dir_sonido):
 # Creamos los sprites (clases) de los objetos del juego:
 
 class Letter(pygame.sprite.Sprite):
+
     letter = None
     _skins = None
     selected = False
@@ -217,7 +218,7 @@ class Board:
 
         for i, j in neighbour(x, y):
 
-            if i == self.last[0] and j == self.last[1]:
+            if i == self.last[0] and j == self.last[1] and self.board[x][y].selected == False:
                 return True
 
         return False
@@ -250,6 +251,7 @@ class Board:
                         item.selected = False
                         item.skinUpdate()
                 self.word = ""
+                self.last = None
                 showWord.setWord(self.word)
                 return
             print(self.word)
