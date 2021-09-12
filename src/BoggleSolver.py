@@ -1,5 +1,5 @@
 from BoggleBoard import BoggleBoard
-from functools import lru_cache
+
 
 class Node:
     def __init__(self, r: int):
@@ -17,7 +17,7 @@ class BoggleSolver:
         for string in dictionary:
             self._add(string)
 
-    # Make R statatic
+    # Make R static
     @classmethod
     def getR(cls):
         return cls._R
